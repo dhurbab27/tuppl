@@ -70,7 +70,11 @@ Also rotate any credentials that appeared in the old `wp-config.php` (DB passwor
 
 ## cPanel deployment
 
-1. **MySQL** — In cPanel → MySQL Databases, create a database and user, grant ALL privileges, then set:
+This repo includes a root [`.cpanel.yml`](.cpanel.yml) so **Git Version Control → Deploy** works. It copies the app to `/home/tuppsxpf/tuppl-web/` (change the username/path in `.cpanel.yml` if your cPanel user differs).
+
+1. **Git Version Control** — Clone/pull this repo in cPanel. Working tree must be clean. Click **Deploy HEAD Commit**.
+2. **Setup Node.js App / Application Manager** — Application root: `tuppl-web`, startup file: `app.js`, production mode.
+3. **MySQL** — In cPanel → MySQL Databases, create a database and user, grant ALL privileges, then set:
 
 ```env
 DATABASE_URL="mysql://CPANEL_USER:PASSWORD@localhost:3306/CPANEL_DB"
