@@ -1,0 +1,59 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tuppl}
+      MYSQL_USER: ${MYSQL_USER:-tuppl}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tupplpass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - tuppl_mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD:-rootpass}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  web:
+    image: ghcr.io/dhurbab27/tuppl:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: mysql://${MYSQL_USER:-tuppl}:${MYSQL_PASSWORD:-tupplpass}@db:3306/${MYSQL_DATABASE:-tuppl}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-to-a-long-random-string}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@tuppl.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      CONTACT_TO: ${CONTACT_TO:-info@tuppl.com}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-Tuppl <noreply@tuppl.com>}
+      SEED_ON_START: ${SEED_ON_START:-true}
+    volumes:
+      - tuppl_uploads:/app/uploads
+
+volumes:
+  tuppl_mysql_data:
+  tuppl_uploads:

@@ -74,6 +74,22 @@ cPanel deploy is not used. On every push to **`master`**, GitHub Actions builds 
 
 `ghcr.io/<owner>/<repo>:latest` (and `sha-…` tags)
 
+## Docker Compose (app + MySQL)
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+- App: http://localhost:3000  
+- MySQL: `localhost:3306` (user/pass/db from `.env.docker.example`)  
+- On start the web container waits for MySQL, runs `prisma migrate deploy`, seeds when `SEED_ON_START=true`, then starts the app.
+
+```bash
+docker compose logs -f web
+docker compose down
+```
+
 ### Pull and run
 
 ```bash
