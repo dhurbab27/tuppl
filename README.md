@@ -72,9 +72,9 @@ Also rotate any credentials that appeared in the old `wp-config.php` (DB passwor
 
 This repo includes a root [`.cpanel.yml`](.cpanel.yml) so **Git Version Control → Deploy** works. It copies the app to `/home/tuppsxpf/tuppl-web/` (change the username/path in `.cpanel.yml` if your cPanel user differs).
 
-1. **Git Version Control** — Clone/pull this repo in cPanel. Working tree must be clean. Click **Deploy HEAD Commit**.
-2. **Setup Node.js App / Application Manager** — Application root: `tuppl-web`, startup file: `app.js`, production mode.
-3. **MySQL** — In cPanel → MySQL Databases, create a database and user, grant ALL privileges, then set:
+1. **Git Version Control** — Clone or **Update from Remote**, ensure the working tree is clean, then **Deploy HEAD Commit**.
+2. **Setup Node.js App** — Application root: `tuppl-web`, startup file: `app.js`, production mode. Bind your domain/subdomain.
+3. **Environment** — Add MySQL + auth vars in the Node app environment (or a `.env` on the server only — never commit secrets):
 
 ```env
 DATABASE_URL="mysql://CPANEL_USER:PASSWORD@localhost:3306/CPANEL_DB"
@@ -82,24 +82,10 @@ NEXTAUTH_SECRET="long-random-string"
 NEXTAUTH_URL="https://your-domain.com"
 ADMIN_EMAIL="admin@your-domain.com"
 ADMIN_PASSWORD="strong-password"
-CONTACT_TO="info@your-domain.com"
-# Optional SMTP
-SMTP_HOST=""
-SMTP_PORT="587"
-SMTP_USER=""
-SMTP_PASS=""
-SMTP_FROM="Tuppl <noreply@your-domain.com>"
+CONTACT_TO="info@tuppl.com"
 ```
 
-2. **Upload the app** — Git clone or zip upload into a folder outside or beside `public_html` (e.g. `~/tuppl-web`). Prefer keeping Node app files out of a raw document root that still serves PHP.
-
-3. **Node.js App** — cPanel → Setup Node.js App:
-   - Application root: `tuppl-web`
-   - Application URL: your domain or subdomain
-   - Startup file: often managed by the panel; ensure `npm start` runs (`next start` on the assigned port)
-   - Enable the app and open the virtual environment terminal
-
-4. **Install & migrate** (in the app virtual env):
+4. **Install & migrate** (in the app’s Node virtual environment terminal):
 
 ```bash
 npm ci
@@ -109,17 +95,9 @@ npm run db:seed
 npm run build
 ```
 
-5. **Uploads** — Ensure `uploads/resumes` is writable by the Node user (`chmod 750 uploads && chmod 750 uploads/resumes`). Do not expose that folder via Apache aliases.
+5. **Uploads** — Ensure `uploads/resumes` is writable (`chmod 750 uploads uploads/resumes`). Do not expose that folder via Apache aliases.
 
-6. **Cut over domain**
-   - Point the domain’s Node application URL to this app, **or**
-   - Proxy the domain to the Node port per your host’s docs
-   - After verifying HTTPS and login/careers/admin, remove old WordPress files from `public_html` (backup first)
-
-7. **Post-cutover cleanup on the server**
-   - Delete WordPress core, `pan.php`, hash-named PHP files, and unused plugins
-   - Drop unused WordPress DB users/passwords after backup
-   - Confirm Wordfence / old `.user.ini` `auto_prepend_file` paths are gone so they cannot break PHP leftovers
+6. **Cut over** — Verify HTTPS, careers, login, and admin. Then backup and remove old WordPress files from `public_html` (including malware such as `pan.php`).
 
 ## Scripts
 
