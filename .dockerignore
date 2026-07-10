@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.github
+.env
+.env.*
+!.env.example
+uploads/resumes/*
+!uploads/resumes/.gitkeep
+src/generated
+npm-debug.log*
+README.md
+AGENTS.md
+CLAUDE.md
+scripts/remove-wordpress-dump.sh
+*.md
+.DS_Store

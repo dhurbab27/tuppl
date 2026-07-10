@@ -68,36 +68,37 @@ chmod +x scripts/remove-wordpress-dump.sh
 
 Also rotate any credentials that appeared in the old `wp-config.php` (DB password, salts) if those accounts still exist on the host.
 
-## cPanel deployment
+## Docker / GitHub Actions
 
-This repo includes a root [`.cpanel.yml`](.cpanel.yml) so **Git Version Control → Deploy** works. It copies the app to `/home/tuppsxpf/tuppl-web/` (change the username/path in `.cpanel.yml` if your cPanel user differs).
+cPanel deploy is not used. On every push to **`master`**, GitHub Actions builds a production image and publishes it to GHCR:
 
-1. **Git Version Control** — Clone or **Update from Remote**, ensure the working tree is clean, then **Deploy HEAD Commit**.
-2. **Setup Node.js App** — Application root: `tuppl-web`, startup file: `app.js`, production mode. Bind your domain/subdomain.
-3. **Environment** — Add MySQL + auth vars in the Node app environment (or a `.env` on the server only — never commit secrets):
+`ghcr.io/<owner>/<repo>:latest` (and `sha-…` tags)
 
-```env
-DATABASE_URL="mysql://CPANEL_USER:PASSWORD@localhost:3306/CPANEL_DB"
-NEXTAUTH_SECRET="long-random-string"
-NEXTAUTH_URL="https://your-domain.com"
-ADMIN_EMAIL="admin@your-domain.com"
-ADMIN_PASSWORD="strong-password"
-CONTACT_TO="info@tuppl.com"
-```
-
-4. **Install & migrate** (in the app’s Node virtual environment terminal):
+### Pull and run
 
 ```bash
-npm ci
-npx prisma generate
-npx prisma migrate deploy
-npm run db:seed
-npm run build
+docker pull ghcr.io/dhurbab27/tuppl:latest
+
+docker run --rm -p 3000:3000 \
+  -e DATABASE_URL="mysql://USER:PASS@HOST:3306/DB" \
+  -e NEXTAUTH_SECRET="long-random-string" \
+  -e NEXTAUTH_URL="https://your-domain.com" \
+  -e ADMIN_EMAIL="admin@tuppl.com" \
+  -e ADMIN_PASSWORD="strong-password" \
+  -v tuppl-uploads:/app/uploads \
+  ghcr.io/dhurbab27/tuppl:latest
 ```
 
-5. **Uploads** — Ensure `uploads/resumes` is writable (`chmod 750 uploads uploads/resumes`). Do not expose that folder via Apache aliases.
+Run migrations against the same database before or after first start:
 
-6. **Cut over** — Verify HTTPS, careers, login, and admin. Then backup and remove old WordPress files from `public_html` (including malware such as `pan.php`).
+```bash
+docker run --rm --entrypoint npx \
+  -e DATABASE_URL="mysql://USER:PASS@HOST:3306/DB" \
+  ghcr.io/dhurbab27/tuppl:latest \
+  prisma migrate deploy
+```
+
+Package visibility: repo **Settings → Packages** (or make the package public if needed). Actions uses `GITHUB_TOKEN` with `packages: write`.
 
 ## Scripts
 
