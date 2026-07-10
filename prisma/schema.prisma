@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum JobType {
+  FULL_TIME
+  CONTRACT
+  REMOTE
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  REJECTED
+  HIRED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(USER)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  applications Application[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Job {
+  id               String        @id @default(cuid())
+  title            String
+  slug             String        @unique
+  jobId            String        @unique
+  description      String        @db.Text
+  responsibilities String        @db.Text
+  qualifications   String        @db.Text
+  department       String
+  location         String
+  type             JobType       @default(FULL_TIME)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  applications     Application[]
+
+  @@index([isActive])
+  @@index([department])
+  @@index([location])
+  @@index([type])
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  jobId       String
+  userId      String?
+  name        String
+  email       String
+  phone       String
+  coverLetter String            @db.Text
+  resumePath  String
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([status])
+  @@index([email])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
