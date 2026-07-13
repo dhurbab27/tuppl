@@ -54,6 +54,7 @@ RUN chmod +x docker-entrypoint.sh \
   && mkdir -p uploads/resumes \
   && chown -R nextjs:nodejs uploads
 
+# Entrypoint starts as root to chown the uploads volume, then drops to nextjs
 USER root
 EXPOSE 3000
 

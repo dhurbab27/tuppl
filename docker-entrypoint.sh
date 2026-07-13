@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
 
+# When started as root (default image user), fix mounted upload perms then drop privileges.
+if [ "$(id -u)" = "0" ]; then
+  mkdir -p /app/uploads/resumes
+  chown -R nextjs:nodejs /app/uploads
+  chmod -R u+rwX,g+rwX /app/uploads
+  exec runuser -u nextjs -- /bin/sh "$0" "$@"
+fi
+
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export PORT="${PORT:-3000}"
 export PATH="/app/node_modules/.bin:${PATH}"
@@ -17,13 +25,6 @@ if [ ! -f /app/node_modules/prisma/build/index.js ]; then
   echo "Prisma CLI missing at /app/node_modules/prisma/build/index.js"
   ls -la /app/node_modules 2>/dev/null || true
   exit 1
-fi
-
-# Volume mounts often arrive as root-owned; ensure the app user can write resumes.
-mkdir -p /app/uploads/resumes
-if [ "$(id -u)" = "0" ]; then
-  chown -R nextjs:nodejs /app/uploads || true
-  chmod -R u+rwX,g+rwX /app/uploads || true
 fi
 
 echo "Waiting for database TCP…"
@@ -52,36 +53,13 @@ socket.on('error', (e) => { console.error(e.message); process.exit(1); });
   sleep 1
 done
 
-run_as_app() {
-  if [ "$(id -u)" = "0" ]; then
-    if command -v runuser >/dev/null 2>&1; then
-      runuser -u nextjs -- "$@"
-    elif command -v su-exec >/dev/null 2>&1; then
-      su-exec nextjs "$@"
-    else
-      su -s /bin/sh nextjs -c "$*"
-    fi
-  else
-    "$@"
-  fi
-}
-
 echo "Database TCP is up. Running migrations…"
-run_as_app $PRISMA_CLI migrate deploy
+$PRISMA_CLI migrate deploy
 
 if [ "${SEED_ON_START:-false}" = "true" ]; then
   echo "Seeding database…"
-  run_as_app $TSX_CLI prisma/seed.ts
+  $TSX_CLI prisma/seed.ts
 fi
 
 echo "Starting app on ${HOSTNAME}:${PORT}…"
-if [ "$(id -u)" = "0" ]; then
-  if command -v runuser >/dev/null 2>&1; then
-    exec runuser -u nextjs -- node server.js
-  elif command -v su-exec >/dev/null 2>&1; then
-    exec su-exec nextjs node server.js
-  else
-    exec su -s /bin/sh nextjs -c "exec node server.js"
-  fi
-fi
 exec node server.js
