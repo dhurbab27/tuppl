@@ -54,7 +54,7 @@ RUN chmod +x docker-entrypoint.sh \
   && mkdir -p uploads/resumes \
   && chown -R nextjs:nodejs uploads
 
-USER nextjs
+USER root
 EXPOSE 3000
 
 ENTRYPOINT ["/bin/sh", "/app/docker-entrypoint.sh"]

@@ -19,6 +19,13 @@ if [ ! -f /app/node_modules/prisma/build/index.js ]; then
   exit 1
 fi
 
+# Volume mounts often arrive as root-owned; ensure the app user can write resumes.
+mkdir -p /app/uploads/resumes
+if [ "$(id -u)" = "0" ]; then
+  chown -R nextjs:nodejs /app/uploads || true
+  chmod -R u+rwX,g+rwX /app/uploads || true
+fi
+
 echo "Waiting for database TCP…"
 i=0
 until err=$(node -e "
@@ -45,13 +52,36 @@ socket.on('error', (e) => { console.error(e.message); process.exit(1); });
   sleep 1
 done
 
+run_as_app() {
+  if [ "$(id -u)" = "0" ]; then
+    if command -v runuser >/dev/null 2>&1; then
+      runuser -u nextjs -- "$@"
+    elif command -v su-exec >/dev/null 2>&1; then
+      su-exec nextjs "$@"
+    else
+      su -s /bin/sh nextjs -c "$*"
+    fi
+  else
+    "$@"
+  fi
+}
+
 echo "Database TCP is up. Running migrations…"
-$PRISMA_CLI migrate deploy
+run_as_app $PRISMA_CLI migrate deploy
 
 if [ "${SEED_ON_START:-false}" = "true" ]; then
   echo "Seeding database…"
-  $TSX_CLI prisma/seed.ts
+  run_as_app $TSX_CLI prisma/seed.ts
 fi
 
 echo "Starting app on ${HOSTNAME}:${PORT}…"
+if [ "$(id -u)" = "0" ]; then
+  if command -v runuser >/dev/null 2>&1; then
+    exec runuser -u nextjs -- node server.js
+  elif command -v su-exec >/dev/null 2>&1; then
+    exec su-exec nextjs node server.js
+  else
+    exec su -s /bin/sh nextjs -c "exec node server.js"
+  fi
+fi
 exec node server.js
