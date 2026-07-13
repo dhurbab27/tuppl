@@ -65,18 +65,26 @@ export function JobApplyForm({
           body.append("coverLetter", values.coverLetter);
           if (values.resume) body.append("resume", values.resume);
 
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 60_000);
           const res = await fetch("/api/applications", {
             method: "POST",
             body,
+            signal: controller.signal,
           });
+          clearTimeout(timeout);
           const data = await res.json();
           if (!res.ok) {
             setServerError(data.error || "Unable to submit application");
             return;
           }
           setSuccess(true);
-        } catch {
-          setServerError("Something went wrong. Please try again.");
+        } catch (err) {
+          setServerError(
+            err instanceof Error && err.name === "AbortError"
+              ? "Request timed out. Please try again."
+              : "Something went wrong. Please try again.",
+          );
         } finally {
           setSubmitting(false);
         }

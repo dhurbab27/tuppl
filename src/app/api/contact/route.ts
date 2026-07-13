@@ -8,19 +8,19 @@ export async function POST(request: Request) {
     const body = await request.json();
     await contactSchema.validate(body, { abortEarly: false });
 
-    const message = await prisma.contactMessage.create({
+    await prisma.contactMessage.create({
       data: {
         name: String(body.name).trim(),
         phone: String(body.phone).trim(),
         email: String(body.email).trim().toLowerCase(),
         message: String(body.message).trim(),
       },
-    });
-
-    await sendMail({
-      to: process.env.CONTACT_TO || "info@tuppl.com",
-      subject: `Contact form from ${message.name}`,
-      text: `Name: ${message.name}\nPhone: ${message.phone}\nEmail: ${message.email}\n\n${message.message}`,
+    }).then(async (message) => {
+      void sendMail({
+        to: process.env.CONTACT_TO || "info@tuppl.com",
+        subject: `Contact form from ${message.name}`,
+        text: `Name: ${message.name}\nPhone: ${message.phone}\nEmail: ${message.email}\n\n${message.message}`,
+      });
     });
 
     return NextResponse.json({ ok: true }, { status: 201 });
