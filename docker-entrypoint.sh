@@ -3,9 +3,19 @@ set -eu
 
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export PORT="${PORT:-3000}"
+export PATH="/app/node_modules/.bin:${PATH}"
 
 if [ -z "${DATABASE_URL:-}" ]; then
   echo "DATABASE_URL is not set"
+  exit 1
+fi
+
+PRISMA_CLI="node /app/node_modules/prisma/build/index.js"
+TSX_CLI="node /app/node_modules/tsx/dist/cli.mjs"
+
+if [ ! -f /app/node_modules/prisma/build/index.js ]; then
+  echo "Prisma CLI missing at /app/node_modules/prisma/build/index.js"
+  ls -la /app/node_modules 2>/dev/null || true
   exit 1
 fi
 
@@ -15,7 +25,7 @@ until err=$(node -e "
 const net = require('net');
 const url = new URL(process.env.DATABASE_URL);
 const host = url.hostname;
-const port = Number(url.port || 3306);
+const port = Number(url.port || 5432);
 const socket = net.connect({ host, port });
 socket.setTimeout(3000);
 socket.on('connect', () => { socket.end(); process.exit(0); });
@@ -36,11 +46,11 @@ socket.on('error', (e) => { console.error(e.message); process.exit(1); });
 done
 
 echo "Database TCP is up. Running migrations…"
-npx prisma migrate deploy
+$PRISMA_CLI migrate deploy
 
 if [ "${SEED_ON_START:-false}" = "true" ]; then
   echo "Seeding database…"
-  npx tsx prisma/seed.ts
+  $TSX_CLI prisma/seed.ts
 fi
 
 echo "Starting app on ${HOSTNAME}:${PORT}…"
