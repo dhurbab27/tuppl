@@ -8,14 +8,14 @@ Next.js rewrite of the Tuppl marketing site with careers filters, Formik applica
 - Formik + Yup
 - framer-motion
 - NextAuth (Credentials) + bcryptjs
-- Prisma + MySQL
+- Prisma + PostgreSQL
 
 ## Local setup
 
-1. Create a MySQL database and user (example already used in local `.env`):
+1. Create a PostgreSQL database (or use Docker):
 
 ```bash
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS tuppl; CREATE USER IF NOT EXISTS 'tuppl'@'localhost' IDENTIFIED BY 'tupplpass'; GRANT ALL ON tuppl.* TO 'tuppl'@'localhost'; FLUSH PRIVILEGES;"
+docker run -d --name tuppl-pg -e POSTGRES_DB=tuppl -e POSTGRES_USER=tuppl -e POSTGRES_PASSWORD=tupplpass -p 5432:5432 postgres:16-alpine
 ```
 
 2. Copy env and install:
@@ -23,7 +23,7 @@ mysql -u root -e "CREATE DATABASE IF NOT EXISTS tuppl; CREATE USER IF NOT EXISTS
 ```bash
 cp .env.example .env
 npm install
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 npm run db:seed
 npm run dev
 ```
@@ -74,16 +74,17 @@ cPanel deploy is not used. On every push to **`master`**, GitHub Actions builds 
 
 `ghcr.io/<owner>/<repo>:latest` (and `sha-…` tags)
 
-## Docker Compose (app + MySQL)
+## Docker Compose (app + PostgreSQL)
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-- App: http://localhost:3000  
-- MySQL: `localhost:3306` (user/pass/db from `.env.docker.example`)  
-- On start the web container waits for MySQL, runs `prisma migrate deploy`, seeds when `SEED_ON_START=true`, then starts the app.
+- App: http://localhost:3123  
+- Postgres host port: `5433` → container `5432`  
+- Use a **new** data dir (e.g. `/mnt/mainpool/apps/tuppl/pgdata`) — do not reuse an old MySQL volume  
+- On start the web container waits for Postgres, runs `prisma migrate deploy`, seeds when `SEED_ON_START=true`, then starts the app.
 
 ```bash
 docker compose logs -f web
@@ -96,7 +97,7 @@ docker compose down
 docker pull ghcr.io/dhurbab27/tuppl:latest
 
 docker run --rm -p 3000:3000 \
-  -e DATABASE_URL="mysql://USER:PASS@HOST:3306/DB" \
+  -e DATABASE_URL="postgresql://USER:PASS@HOST:5432/DB?schema=public" \
   -e NEXTAUTH_SECRET="long-random-string" \
   -e NEXTAUTH_URL="https://your-domain.com" \
   -e ADMIN_EMAIL="admin@tuppl.com" \
@@ -109,7 +110,7 @@ Run migrations against the same database before or after first start:
 
 ```bash
 docker run --rm --entrypoint npx \
-  -e DATABASE_URL="mysql://USER:PASS@HOST:3306/DB" \
+  -e DATABASE_URL="postgresql://USER:PASS@HOST:5432/DB?schema=public" \
   ghcr.io/dhurbab27/tuppl:latest \
   prisma migrate deploy
 ```

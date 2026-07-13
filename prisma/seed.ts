@@ -1,21 +1,13 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, JobType } from "../src/generated/prisma/client";
 
-const url = process.env.DATABASE_URL
-  ? new URL(process.env.DATABASE_URL)
-  : null;
+const connectionString =
+  process.env.DATABASE_URL ??
+  "postgresql://tuppl:tupplpass@localhost:5432/tuppl?schema=public";
 
-const adapter = new PrismaMariaDb({
-  host: url?.hostname ?? "localhost",
-  user: url ? decodeURIComponent(url.username) : "tuppl",
-  password: url ? decodeURIComponent(url.password) : "tupplpass",
-  database: url ? url.pathname.replace(/^\//, "") : "tuppl",
-  port: Number(url?.port || 3306),
-  connectionLimit: 5,
-});
-
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 const jobs = [

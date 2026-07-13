@@ -29,7 +29,7 @@ socket.on('error', (e) => { console.error(e.message); process.exit(1); });
   if [ "$i" -ge 90 ]; then
     echo "Database TCP not ready after 90s"
     echo "Last error: $err"
-    echo "DATABASE_URL host must be Compose service name (db) and port 3306 inside the network."
+    echo "DATABASE_URL host must be Compose service name (db) and port 5432 inside the network."
     exit 1
   fi
   sleep 1
